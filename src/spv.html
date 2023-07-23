@@ -1,0 +1,320 @@
+<!--
+
+SPViewer - MSX Screen 2 Sprite Patterns Viewer
+Copyright (c) 2023, Rafael López "Orion"
+https://www.orionmsx.com
+
+This program is licensed under the BSD 3-Clause License.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its
+   contributors may be used to endorse or promote products derived from
+   this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+-->
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Orion SPViewer 1.0 - MSX Screen 2 Sprite Patterns Viewer</title>
+        <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+        <script src="https://code.jquery.com/jquery-3.7.0.min.js" integrity="sha256-2Pmvv0kuTBOenSvLm6bvfBSSHrUJ+3A7x6P5Ebd07/g=" crossorigin="anonymous"></script>
+        <style>
+            .pixel{
+                width: 10px;
+                height: 10px;
+                border-width: 1px;
+                border-color: white;
+                border-style: solid;
+                display: block;
+            }
+
+            .pixelON{
+                background-color: black;
+            }
+
+            .pixelOFF{
+                background-color: beige;
+            }
+
+            .cabSpt8{
+                width:96px;
+                text-align: center;
+                font-size: smaller;
+            }
+
+            .cabSpt16{
+                width:192px;
+                text-align: center;
+                font-size: smaller;
+            }
+
+            .sprite8{
+                width: 96px;
+                height: 111px;
+                display: flex;
+                flex-wrap: wrap;
+                margin-right: 10px;
+                margin-bottom: 30px;
+            }
+
+            .sprite16{
+                width: 192px;
+                height: 207px;
+                display: flex;
+                flex-wrap: wrap;
+                margin-right: 10px;
+                margin-bottom: 30px;
+            }
+
+            #contenedorSprites{
+                display: flex;
+                flex-wrap: wrap;
+                width:100%;
+                margin-top: 30px;
+            }
+
+            .formElement{
+                margin-bottom: 10px;
+            }
+
+            #wrapper{
+                width:95%;
+                margin: 0 auto;
+            }
+
+            body{
+                font-family: sans-serif;
+            }
+
+            .header{
+                background-color: darkgray;
+                padding: 10px;
+                margin-bottom: 20px;
+            }
+
+            #titulo{
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                height: 50px;
+                margin-bottom: 10px;
+            }
+
+            .logo{
+                width: 50px;
+                height: 50px;
+                display: block;
+                margin-right: 10px;
+            }
+
+            .github{
+                font-size: smaller;
+            }
+
+            h1{
+                margin-top: 0px;
+                margin-bottom: 0px;
+                display: block;
+            }
+
+        </style>
+    </head>
+    <body onload="javascript:generateSprites()">
+        <div id="wrapper">
+            <div class="header">
+                <div id="titulo">
+                    <img src="spv-orion.png" class="logo" />
+                    <h1>Sprite Patterns Viewer v1.0</h1>
+                </div>
+                <div class="github"><a href="https://github.com/orionmsx/spv-orion/releases/latest" target="_blank">GitHub Project</a> by <a href="https://www.orionmsx.com
+                " target="_blank">Orion</a></div>
+            </div>
+            <div class="formElement">
+                <label for="tipoSprites">1. Sprite Mode:</label>
+                <select id="tipoSprites">
+                    <option value="8">8x8</option>
+                    <option value="16" selected>16x16</option>
+                </select>
+            </div>
+            <div class="formElement">
+                <label for="cabecera">2. Have BIN Header:</label>
+                <input type="checkbox" id="cabecera" value="concabecera">
+            </div>
+            <div class="formElement">
+                <label for="upload">3. BIN file:</label>
+                <input id="upload" type=file accept="text/html" name="files[]" size=30>
+            </div>
+            <div class="formElement">
+                <input id="reset" type=button value="Reset">
+            </div>
+
+            <script>
+                function dec2Bin(dec) {
+                    return (dec >>> 0).toString(2).padStart(8,'0');
+                }
+
+                function handleFileSelect(evt) {
+                    let files = evt.target.files;
+                    let f = files[0];
+                    let reader = new FileReader();
+
+                    reader.onload = (function(theFile) {
+                        return function(e) {
+
+                            let txtNum = "";
+                            let nBit = 0;
+                            let nBitTemp;
+                            let posicionReal=0;
+
+                            let view = new Uint8Array(e.target.result);
+
+                            jQuery('.pixel').removeClass("pixelON").addClass("pixelOFF");
+
+                            for(let num of view) {
+
+                                if ((jQuery("#cabecera").is(":checked")) && (posicionReal<7)){
+                                    posicionReal++;
+                                }
+                                else {
+                                    txtNum = dec2Bin(num);
+                                    for(nBitTemp=0;nBitTemp<txtNum.length;nBitTemp++) {
+
+                                        if(txtNum[nBitTemp] == '1') {
+                                            jQuery('#bit' + nBit).removeClass("pixelOFF").addClass("pixelON");
+                                        }
+
+                                        nBit++;
+                                    }
+                                }
+                            }
+
+                        };
+                    })(f);
+                
+                    reader.readAsArrayBuffer(f);
+                }
+                
+                document.getElementById('upload').addEventListener('change', handleFileSelect, false);
+
+                function generateSprites(tipo="16") {
+
+                    const spritesContenedor = document.querySelector("#contenedorSprites");
+                    let contadorBits = 0;
+                    let nBit;
+                    let maxSprites;
+                    let maxBits;
+
+                    if(tipo=="8") {
+                        maxSprites = 256;
+                        maxBits = 64;
+                    }
+                    else {
+                        maxSprites = 64;
+                        maxBits = 256;
+                    }
+
+                    if (tipo==8) {
+
+                        for (nSprite=0;nSprite<maxSprites;nSprite++) {
+                            
+                            const spriteTmp = document.createElement("div");
+                            spriteTmp.setAttribute("id","spt" + nSprite);
+                            spriteTmp.setAttribute("class","sprite sprite" + tipo);
+                            spriteTmp.setAttribute("jerarquia","sprite");
+                            spritesContenedor.appendChild(spriteTmp);
+
+                            const cabSpriteTmp = document.createElement("div");
+                            cabSpriteTmp.setAttribute("id","cabSpt" + nSprite);
+                            cabSpriteTmp.setAttribute("class","cabSpt8");
+                            spriteTmp.appendChild(cabSpriteTmp);
+                            jQuery("#cabSpt" + nSprite).text("#" + nSprite);
+
+                            for (nBit=contadorBits;nBit<contadorBits+maxBits;nBit++) {
+
+                                const bitTemp = document.createElement("div");
+                                bitTemp.setAttribute("id","bit" + nBit);
+                                bitTemp.setAttribute("class","pixel pixelOFF");
+                                spriteTmp.appendChild(bitTemp);
+                            }
+                            contadorBits += maxBits;
+                        }
+                    }
+                    else {
+
+                        let posIzq = 0;
+                        let posDer = 128;
+                        
+                        for (nSprite=0;nSprite<maxSprites;nSprite++) {
+                            const spriteTmp = document.createElement("div");
+                            spriteTmp.setAttribute("id","spt" + nSprite);
+                            spriteTmp.setAttribute("class","sprite" + tipo);
+                            spriteTmp.setAttribute("jerarquia","sprite");
+                            spritesContenedor.appendChild(spriteTmp);
+
+                            const cabSpriteTmp = document.createElement("div");
+                            cabSpriteTmp.setAttribute("id","cabSpt" + nSprite);
+                            cabSpriteTmp.setAttribute("class","cabSpt16");
+                            spriteTmp.appendChild(cabSpriteTmp);
+                            jQuery("#cabSpt" + nSprite).text("#" + nSprite + " (#" + nSprite*4 + " - #" + (nSprite*4+3) + ")");
+
+                            for (nBit=contadorBits;nBit<contadorBits+maxBits;nBit++) {
+
+                                const bitTemp = document.createElement("div");
+
+                                if ((nBit%16)>7) {
+                                    bitTemp.setAttribute("id","bit" + posDer);
+                                    posDer++;
+                                }
+                                else {
+                                    bitTemp.setAttribute("id","bit" + posIzq);
+                                    posIzq++;
+                                }
+
+                                bitTemp.setAttribute("class","pixel pixelOFF");
+                                spriteTmp.appendChild(bitTemp);
+                            }
+                            contadorBits += maxBits;
+                            posIzq += 128;
+                            posDer += 128;
+                        }
+                    }                    
+                }
+
+                function reordenar(evt) {
+
+                    jQuery("[jerarquia='sprite']").remove();
+                    generateSprites(jQuery("#tipoSprites").val());
+
+                    jQuery("#upload").val("");
+                }
+
+                document.getElementById('tipoSprites').addEventListener('change', reordenar, false);
+                document.getElementById('reset').addEventListener('click', reordenar, false);
+            </script>
+            <div id="contenedorSprites">
+            </div>
+        </div>
+    </body>
+</html>
